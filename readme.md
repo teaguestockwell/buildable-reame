@@ -3,7 +3,6 @@
 [linkedin-shield]: https://img.shields.io/badge/-LinkedIn-black.svg?logo=linkedin&colorB=555
 [linkedin-url]: https://www.linkedin.com/in/teague-stockwell/
 
-<!-- PROJECT LOGO -->
 <br />
 <p align="center">
   <a href="https://hello-next-auth.vercel.app">
@@ -21,7 +20,6 @@
   </p>
 </p>
 
-<!-- TABLE OF CONTENTS -->
 <details open="open">
   <summary><h2 style="display: inline-block">Table of Contents</h2></summary>
     <li><a href="#about-the-project">About The Project</a></li>
@@ -32,60 +30,84 @@
     <li><a href="#acknowledgements">Acknowledgements</a></li>
 </details>
 
-<!-- ABOUT THE PROJECT -->
-
 ## About The Project
+A post is a way to share the build process of something that contains modular parts. For example a post about a bike would contain wheels, tires, a sprocket, a handlebar, pedals etc...
 
-A post is a way to share the build process of something that contains modular parts. Some examples of use cases would be software, food, bikes, and [fpv quadcopters](https://rotorbuilds.com/)
-
-For example a post about a bike would contain wheels, tires, a sprocket, a handlebar, pedals etc...
-
-These parts should be listed on the post so users can explore posts by filtering based on a specific part or parts
+These parts should be listed on the post so users can explore other posts by filtering based on a specific part or parts
 
 A user that's want to build a similar bike uses these posts to find part combinations that make their ideal bike
 
-Parts should be categorized. In the example of the bike, handlebars would be a one category, frames would be another
+Buildable is a collection of multiple sub reddits that contain posts and their parts. One could be about bikes, and another could be Baking
 
-Some interesting features of buildable that have been implemented are:
+### API
+The api is deployed as serverless functions to vercel - I believe this uses AWS lambda under the hood. These functions use an ORM called Prisma to query a managed MySql cluster hosted on planetscale. The api service is partially RESTfull. Later I wrote a [middleware for serverless functions](https://github.com/teaguestockwell/next-api-mw) that made the apis functionality composable in a very similar way to react hooks. After this, some of the endpoints started drifting from RESTfull to more of a RPC pattern. Eventually, I would like to use the paid versions on vercel and planetscale to rollout a multiAZ deployment, but for now the free tier of each has been working great.
 
-- A threaded commenting system
-- Client side image compression with [browser-image-compression](https://github.com/Donaldcwl/browser-image-compression)
-- Rich text editing with [quill](https://github.com/quilljs/quill)
-- Client side image uploads with presigned urls and rate limiting
-- Like / save posts and like comments
-- Optimistic updates for likes, saves, and comments with React Query and rollbacks on server error
-- Pages are initially loaded from cached incremental statically generated HTML with Next.js and Vercel, then the data is refetch client side with React Query
-- Search topics (sub reddits), and users
+### UI
+Using nextjs and react most of the UI is served from a CDN as static html that gets updated with the latest data every so often. When the browser loads the app, the client shows that stale html while it fetches the latest from the server in tha background.
+Parts of the UI that are not public read are rendered on the server - like the page that edits a post. In either case the client is hard at work combining the server's content with rich client side functionality.
+Some notable parts of the UI are:
+- A component library called Mantine
+- React query for caching and fetching server state
+- Zustand for client state
+- Emotion for css in js
 
-### Serverless Connection Pooling
-
-Initially I used AWS RDS, but the serverless functions quickly exhausted all the connections to my small RDS instance. One possible solution is using AWS RDS Proxy to pool connections on postgres. Unfortunately, because of the way RDS proxy pins connections it cant be used with [prisma](https://www.prisma.io/docs/guides/deployment/deployment-guides/caveats-when-deploying-to-aws-platforms). Another way may be to roll a custom PgBouncer on an EC2 instance. I ended up switching to Digital Ocean because they offered a managed PostgreSQL with PgBouncer. Finally I switched to Planet Scales hosted Vitess cluster of MySQL DBs.
-
-### Presigned Image Uploads
-
-When a client want to upload an image, a request is sent to the API to return a presigned upload URL. Before the API returns the URL, it can make sure the user is signed in and that they have not exceeded their rate limit. In the future, rate limiting would be handled by Redis, but for now it lives in a DB table. Once the client receives the upload URL any they input an image, it gets compressed in the browser using [browser-image-compression](https://www.npmjs.com/package/browser-image-compression) until it is within the upload limit. When the image is submitted to the API, the API sends a HEAD req to verify the upload was successful. It can then save the image and remove the Pic job it created when issuing the presigned URL to track stale objects that may be in S3.
-
-### Incremental Static Generation & React Query
-
-Next.js can generate static HTML incrementally into it's edge network cache. When that page is served to the client, the next data is passed to react-query as as initial data. From there react-query can take over and do some powerful things like refetch on window focus and optimistic updates for mutations.
+### Scraping service
+The scraping service will allow users to add urls to parts they used in their post. The bulk of the scraping service is currently being built as an open source library [here](https://github.com/teaguestockwell/price-scraper). It uses chromium to load a page then parses structured data embedded in the html similar to how [google indexes products for rich results](https://developers.google.com/search/docs/advanced/structured-data/intro-structured-data). This seems to work on on retailers that support a format of structured data, but in the future there may need to be something less fragile and generic like a natural language processing pipeline to extract product information. Whether or not this could be cost prohibitive because of compute remains tbd.
 
 ### Authentication
+The serverless functions use a package called Next Auth to authenticate users with googles oauth service. From their each function validate that a request has been authenticated, and then proceed to authorizing the request.
 
-Next Auth and Google OAuth are used to authenticate users. From there the API can determine what roles a user has.les a user has.
+### Serverless Connection Pooling
+Serverless functions quickly exhaust db connections. A few of the solutions I have tried include:
+- AWS RDS and RDS Proxy 
+- A PgBouncer on an EC2 instance
+- Digital Ocean with PostgreSQL and PgBouncer. 
+
+After working with these, I switched to MySQL and use planetscale to host a managed vitese cluster. planetscale did a few things very well that set it a step ahead ov the above solutions:
+
+- A free tier with up to 1000 connections
+- Pull request based schema changes
+- Excellent built in logs
+- Multi AZ deployments
+- Auto scaling to the moon because of vitese
+
+### Image Uploads
+1. The client authenticates with Googles Oath service
+1. The client sends a requests a presigned upload url
+1. A serverless function rate limits the request using a sliding log algorithm
+1. The serverless function creates a record of the pending image that has not been assigned a resource
+1. The serverless function responds to the client with a presigned upload url
+1. The client attaches a picture to a post or community
+1. The client compresses the picture using a service worker until it meets the size limit on the pre signature
+1. The client uploads the picture using th pre signature
+1. The client submits the form containing the picture to the server
+1. A serverless function verifies the picture was uploaded correctly by sending a head request to s3
+1. The serverless function deletes the pending upload job
+1. The serverless function runs a chron job to cleanup stale pictures
+
+### Incremental Static Regeneration & React Query
+Next.js can generate static HTML incrementally into it's edge network cache. When that page is served to the client, the next data is passed to react-query as as initial data. From there react-query can take over and do some powerful things like refetch on window focus and optimistic updates for mutations.
+
+### Threaded comments
+[full writeup](https://teaguestockwell.com/blog/threaded-comments)
+- statically cached html
+- client side stale while revalidate
+- optimistic updates
+
+### Search
+A user may search for new communities to follow, and other users. This is currently implemented using a serverless functions, a db query, and a client cache. In the future I would like to learn more about elastic search and scale this out into a separate search service.
 
 ## Built With
-
-- [Create Next App](https://nextjs.org/docs/api-reference/create-next-app)
 - [TypeScript](https://www.typescriptlang.org)
-- [Next Auth](https://next-auth.js.org/)
-- [Prisma](https://www.prisma.io/)
-- [Zustand](https://github.com/pmndrs/zustand)
-- [Ant Design](https://ant.design/)
 - [React](https://reactjs.org/)
+- [Nextjs](https://nextjs.org/docs/api-reference/create-next-app)
+- [Prisma](https://www.prisma.io/)
+- [Next Auth](https://next-auth.js.org/)
 - [React Query](https://react-query.tanstack.com/)
+- [Zustand](https://github.com/pmndrs/zustand)
+- [Mantine](https://mantine.dev/)
 
 ## System Architecture
-
 - Planet Scale's Vitess cluster service
 - AWS S3 Bucket behind the AWS Cloudfront CDN for user images
 - Vercel's serverless functions and edge network
@@ -96,7 +118,6 @@ Next Auth and Google OAuth are used to authenticate users. From there the API ca
 </p>
 
 ## Database Migrations
-
 Prisma.schema is the source of truth for data models. To deploy changes to production:
 
 - update prisma schema
@@ -111,14 +132,11 @@ Prisma.schema is the source of truth for data models. To deploy changes to produ
 - merge pr with cli or web ui `pscale deploy-request deploy buildable 1` 1 is the pr number reported by the cli when the pr was created
 
 ## Roadmap
-
 See the [open issues](https://github.com/teaguestockwell/buildable-readme/issues) for a list of proposed features (and known issues).
 
 ## Contact
-
 Teague Stockwell - [LinkedIn](https://www.linkedin.com/in/teague-stockwell)
 
 ## Acknowledgements
-
 - [RotorBuilds](https://rotorbuilds.com/)
 - [Lee Robinson's AWS upload template](https://github.com/leerob/nextjs-aws-s3)
