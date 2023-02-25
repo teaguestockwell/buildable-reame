@@ -91,7 +91,7 @@
 ### Serverless Connection Pooling
 - serverless functions quickly exhaust db connections: a few of the solutions I have tried include:
   - aws rds and rds proxy
-  - A pgbouncer on an ec2 instance
+  - pgbouncer on an ec2 instance
   - digital ocean with postgres and pgbouncer.
 - after working with these, I switched to planetscale to host a managed vitese cluster because it provides:
   - a free tier with up to 1000 connections
