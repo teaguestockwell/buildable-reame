@@ -99,6 +99,154 @@
   - excellent built in logs
   - multi AZ deployments
   - auto scaling to the moon because of vitess
+  
+### DB
+- notably, when deploying to vitess, fk containtraints are not enforced
+  - [this mean that fk indices need to be manually added](https://www.briananglin.me/posts/spending-5k-to-learn-how-database-indexes-work/)
+```mermaid
+erDiagram
+
+  User {
+    String email PK 
+    String userId  
+    String name  
+    DateTime createdAt  
+    DateTime updatedAt  
+    String profileSrc  "nullable"
+    String profilePicS3Key  "nullable"
+    String about  "nullable"
+    Int profileViews  
+    Int postViews  
+    Int numFollowers  
+    }
+  
+
+  Post {
+    String postId PK 
+    String email  
+    String topicId  
+    String topicName  
+    String userId  
+    DateTime createdAt  
+    DateTime updatedAt  
+    Int numLikes  
+    String html  
+    Int views  
+    Json storePartsQty  "nullable"
+    }
+  
+
+  Comment {
+    String commentId PK 
+    String email  
+    String postId  
+    String parentCommentId  
+    DateTime createdAt  
+    DateTime updatedAt  
+    Int numLikes  
+    String text  
+    }
+  
+
+  Pic {
+    String picId PK 
+    String email  
+    String postId  "nullable"
+    String partId  "nullable"
+    String topicId  "nullable"
+    String s3Key  
+    DateTime createdAt  
+    }
+  
+
+  PicJob {
+    String s3Key PK 
+    DateTime createdAt  
+    }
+  
+
+  RateLimit {
+    String rateLimitId PK 
+    String email  
+    DateTime createdAt  
+    Int resource  
+    }
+  
+
+  Topic {
+    String topicId PK 
+    String name  
+    String about  
+    DateTime createdAt  
+    DateTime updatedAt  
+    Int followerCount  
+    Int views  
+    }
+  
+
+  PartCategory {
+    String partCategoryId PK 
+    String topicId  
+    String topicName  
+    String name  
+    String about  
+    }
+  
+
+  Part {
+    String partId PK 
+    String topicId  
+    String partCategoryId  
+    Int numPosts  
+    String name  
+    String description  "nullable"
+    String src  "nullable"
+    }
+  
+
+  Store {
+    String storeId PK 
+    String name  
+    }
+  
+
+  StorePart {
+    String storePartId PK 
+    String partId  
+    String storeId  
+    String price  
+    String url  
+    DateTime updatedAt  
+    }
+  
+    User o{--}o Post : ""
+    User o{--}o Post : ""
+    User o{--}o Topic : ""
+    User o{--}o User : ""
+    User o{--}o User : ""
+    User o{--}o Topic : ""
+    Post o{--|| User : "user"
+    Post o{--|| Topic : "topic"
+    Post o{--}o User : ""
+    Post o{--}o User : ""
+    Post o{--}o StorePart : ""
+    Comment o{--|| User : "user"
+    Comment o{--|| Post : "post"
+    Comment o{--}o User : "liked"
+    Comment o{--}o User : "saved"
+    Pic o{--|o Post : "post"
+    Pic o{--|| User : "user"
+    Pic o|--|o Topic : "topic"
+    RateLimit o{--|| User : "user"
+    Topic o{--}o User : ""
+    Topic o{--}o User : ""
+    PartCategory o{--|| Topic : "topic"
+    Part o{--|| Topic : "topic"
+    Part o{--|| PartCategory : "partCategory"
+    StorePart o{--|| Store : "store"
+    StorePart o{--|| Part : "part"
+    StorePart o{--}o Post : ""
+```
 
 ### Image Uploads
 ```mermaid
