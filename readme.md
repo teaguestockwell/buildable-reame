@@ -155,9 +155,48 @@ cdn -->> browser: img {key} {size}
 ```
 
 ### Incremental Static Regeneration & React Query
-1. Next.js can generate static HTML incrementally into it's edge network cache. 
-1. When that page is served to the client, the next data is passed to react-query as as initial data.
-1. From there react-query can take over and do some powerful things like refetch on window focus and optimistic updates for mutations.
+```mermaid
+sequenceDiagram
+participant client
+participant cdn
+participant api
+
+note over client, db: incremental static generation
+client ->> cdn: get html
+opt cache miss
+cdn ->> api: get html
+api ->> db: get data
+db -->> api: data
+api ->> api: render html
+api -->> cdn: html
+end
+cdn -->> client: html with stale data
+client ->> client: first contentful paint
+client -->> client: react hydrates
+client -->> client: query cache populated with stale data
+
+note over client, db: stale while revalidate
+client -->> api: get fresh data
+api -->> client: fresh data
+client -->> client: diff data
+opt is diffrent
+client ->> client: render  data
+end
+
+note over client, db: client side rendering
+client ->> api: get data
+api -->> client: data
+client ->> client: render data
+
+note over client, db: server side rendering
+client ->> api: get page
+api ->> db: get data
+db -->> api: data
+api ->> api: render html - server side rendering
+api -->> client: html with fresh data
+client ->> client: first contentful paint
+client --> client: react hydrates
+```
 
 ### Threaded comments
 - [full writeup](https://teaguestockwell.com/blog/threaded-comments)
