@@ -9,7 +9,7 @@
     <img src="./public/logo-120-120.png" alt="Logo" width="120" height="120">
   </a>
 
-  <h3 align="center">Buildable</h3>
+  <h3 align="center">More Builds</h3>
 
   <p align="center">
    A social media platform for exploring and sharing buidable items
@@ -39,6 +39,29 @@ These parts should be listed on the post so users can explore other posts by fil
 A user that's want to build a similar bike uses these posts to find part combinations that make their ideal bike
 
 Buildable is a collection of multiple sub reddits that contain posts and their parts. One could be about bikes, and another could be Baking
+
+## System Architecture
+
+- google oauth (authentication)
+- vercel cdn (static assets like html css js)
+- vercel sererless functions (rpc api)
+- aws cdn 1 / bucket 1 (original blobs)
+- aws cdn 2 / bucket 2 (optimized blobs)
+- aws functions (sharp img optimization)
+- planetscale (managed cluster of mysql)
+- github / npm next-api-mw (package for api middleware)
+- github / npm price-scraper (pacakge for scraping products)
+- github ui + api (nextjs monolith)
+- github scraper (express / nodejs / chromium scraping service)
+- azure container registry (docker imgs for k8s)
+- azure k8s cert manager (rotates tls certs from lets encrpt)
+- azure k8s control plane (scraping service orchestration)
+- azure k8s ingress (https ingress load balancer)
+- azure k8s node (nodejs scraper instances)
+
+<p align="center">
+  <img src="https://user-images.githubusercontent.com/71202372/221341449-aecfc595-09d4-4871-a713-cb2a3df0e8dd.jpg" width="1000vh" >
+</p>
 
 ### API
 
@@ -120,17 +143,6 @@ A user may search for new communities to follow, and other users. This is curren
 - [React Query](https://react-query.tanstack.com/)
 - [Zustand](https://github.com/pmndrs/zustand)
 - [Mantine](https://mantine.dev/)
-
-## System Architecture
-
-- Planet Scale's Vitess cluster service
-- AWS S3 Bucket behind the AWS Cloudfront CDN for user images
-- Vercel's serverless functions and edge network
-- Google Oauth
-
-<p align="center">
-  <img src="https://user-images.githubusercontent.com/71202372/221340527-b8a083c6-a4f0-4a52-8286-b86e696f8be1.jpg" width="1000vh" >
-</p>
 
 ## Database Migrations
 
