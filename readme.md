@@ -3,14 +3,11 @@
 [linkedin-shield]: https://img.shields.io/badge/-LinkedIn-black.svg?logo=linkedin&colorB=555
 [linkedin-url]: https://www.linkedin.com/in/teague-stockwell/
 
-<br />
 <p align="center">
   <a href="https://hello-next-auth.vercel.app">
     <img src="./public/logo-120-120.png" alt="Logo" width="120" height="120">
   </a>
-
   <h3 align="center">More Builds</h3>
-
   <p align="center">
    A social media platform for exploring and sharing buidable items
     <br />
@@ -24,86 +21,86 @@
   <summary><h2 style="display: inline-block">Table of Contents</h2></summary>
     <li><a href="#about-the-project">About The Project</a></li>
     <li><a href="#system-architecture">System Architecture</a></li>
-    <li><a href="#database-migrations">Database Migrations</a></li>
     <li><a href="#roadmap">Roadmap</a></li>
     <li><a href="#contact">Contact</a></li>
     <li><a href="#acknowledgements">Acknowledgements</a></li>
 </details>
 
 ## About The Project
-
-A post is a way to share the build process of something that contains modular parts. For example a post about a bike would contain wheels, tires, a sprocket, a handlebar, pedals etc...
-
-These parts should be listed on the post so users can explore other posts by filtering based on a specific part or parts
-
-A user that's want to build a similar bike uses these posts to find part combinations that make their ideal bike
-
-Buildable is a collection of multiple sub reddits that contain posts and their parts. One could be about bikes, and another could be Baking
+- share the build process of something that contains modular parts. for example a bike contains wheels, tires, a sprocket etc...
+- users can explore other buids by filtering based on a specific parts
+- more builds is a collection of topics that contain builds parts and their retialers.
 
 ## System Architecture
-
-- google oauth (authentication)
-- vercel cdn (static assets like html css js)
-- vercel sererless functions (rpc api)
-- aws cdn 1 / bucket 1 (original blobs)
-- aws cdn 2 / bucket 2 (optimized blobs)
-- aws functions (sharp img optimization)
-- planetscale (managed cluster of mysql)
-- github / npm next-api-mw (package for api middleware)
-- github / npm price-scraper (pacakge for scraping products)
-- github ui + api (nextjs monolith)
-- github scraper (express / nodejs / chromium scraping service)
-- azure container registry (docker imgs for k8s)
-- azure k8s cert manager (rotates tls certs from lets encrpt)
-- azure k8s control plane (scraping service orchestration)
-- azure k8s ingress (https ingress load balancer)
-- azure k8s node (nodejs scraper instances)
-
 <p align="center">
   <img src="https://user-images.githubusercontent.com/71202372/221341449-aecfc595-09d4-4871-a713-cb2a3df0e8dd.jpg" width="1000vh" >
 </p>
 
-### API
-
-The api is deployed as serverless functions to vercel - I believe this uses AWS lambda under the hood. These functions use an ORM called Prisma to query a managed MySql cluster hosted on planetscale. The api service is partially RESTfull. Later I wrote a [middleware for serverless functions](https://github.com/teaguestockwell/next-api-mw) that made the apis functionality composable in a very similar way to react hooks. After this, some of the endpoints started drifting from RESTfull to more of a RPC pattern. Eventually, I would like to use the paid versions on vercel and planetscale to rollout a multiAZ deployment, but for now the free tier of each has been working great.
+- gcp oauth
+    - the browser perform an authentication flow, then it uses the api to [exchange an acsess code for an jwt cookie](https://sourcegraph.com/notebooks/Tm90ZWJvb2s6MTc2MQ==)
+- vercel cdn
+    - serve static acsess like html css and js to the browser
+- vercel sererless functions
+    - stateless deployment of a backend service that exposes crud, rate limiting, authorization, rbac and presigned upload urls (sas urls)
+- aws cdn 1 + bucket 1
+    - store and serve original imgs uploads
+- aws cdn 2 + bucket 2
+    - store and serve size variants of the origianl blobs
+- aws functions
+    - optimaize orignial imgs into many sizes with [sharp](https://aws.amazon.com/blogs/networking-and-content-delivery/image-optimization-using-amazon-cloudfront-and-aws-lambda/)
+- planetscale mysql
+    - a managed rdbs for horizontally scaling a cluster of mysql databases
+- github next-api-mw
+    - repo / feed for api middleware packakge [next-api-mw](https://www.npmjs.com/package/next-api-mw)
+- github price-scraper
+    - repo / feed for [getting product data such as price, name, images](https://www.npmjs.com/package/price-scraper)
+- github more-builds
+    - a repo for a monolithic app service with nextjs
+- github scraper
+   - a repo for a docker img built with express / nodejs / chromium for web scraping
+- azure container registry
+   - a artifact feed for docker images waiting to be applied to k8s
+- azure k8s cert manager
+   - rotates tls certs from lets encrpt
+- azure k8s control plane
+   - scraping service orchestration
+- azure k8s ingress
+   - https ingress and load balancer
+- azure k8s nodes
+   - nodejs scraper instances
 
 ### UI
+- using nextjs and react most of the UI is served from a CDN as static html that gets updated with the latest data every so often
+- when the browser loads the app, the client shows that stale html while the js fetches the latest data from the server in tha background.
+- the ui used a mix of client and server side rendering to show contentfull content quickly
+- in either case the client is hard at work combining the server's content with rich client side functionality.
 
-Using nextjs and react most of the UI is served from a CDN as static html that gets updated with the latest data every so often. When the browser loads the app, the client shows that stale html while it fetches the latest from the server in tha background.
-Parts of the UI that are not public read are rendered on the server - like the page that edits a post. In either case the client is hard at work combining the server's content with rich client side functionality.
-Some notable parts of the UI are:
 
-- A component library called Mantine
-- React query for caching and fetching server state
-- Zustand for client state
-- Emotion for css in js
+### API
+- deployed as serverless functions to vercel
+- these functions use an orm called prisma to query a managed mysql cluster hosted on planetscale
+- the api service is stateless and consumed using remote procedure call (RPC) and a [middleware i wrote for serverless functions](https://github.com/teaguestockwell/next-api-mw) that makes api functionality composable in a similar way to react hooks
 
 ### Scraping service
+- allow users to add urls to parts they used in their post
+- the bulk of the scraping service is built as an open source library [here](https://github.com/teaguestockwell/price-scraper). 
+- it uses chromium to load a page then parses structured data embedded in the html similar to how [google indexes products for rich results](https://developers.google.com/search/docs/advanced/structured-data/intro-structured-data).
+- [full writeup](https://teaguestockwell.com/blog/price-scraper)
 
-The scraping service will allow users to add urls to parts they used in their post. The bulk of the scraping service is currently being built as an open source library [here](https://github.com/teaguestockwell/price-scraper). It uses chromium to load a page then parses structured data embedded in the html similar to how [google indexes products for rich results](https://developers.google.com/search/docs/advanced/structured-data/intro-structured-data). This seems to work on on retailers that support a format of structured data, but in the future there may need to be something less fragile and generic like a natural language processing pipeline to extract product information. Whether or not this could be cost prohibitive because of compute remains tbd.
-
-### Authentication
-
-The serverless functions use a package called Next Auth to authenticate users with googles oauth service. From their each function validate that a request has been authenticated, and then proceed to authorizing the request.
 
 ### Serverless Connection Pooling
-
-Serverless functions quickly exhaust db connections. A few of the solutions I have tried include:
-
-- AWS RDS and RDS Proxy
-- A PgBouncer on an EC2 instance
-- Digital Ocean with PostgreSQL and PgBouncer.
-
-After working with these, I switched to MySQL and use planetscale to host a managed vitese cluster. planetscale did a few things very well that set it a step ahead ov the above solutions:
-
-- A free tier with up to 1000 connections
-- Pull request based schema changes
-- Excellent built in logs
-- Multi AZ deployments
-- Auto scaling to the moon because of vitese
+- serverless functions quickly exhaust db connections: a few of the solutions I have tried include:
+  - aws rds and rds proxy
+  - A pgbouncer on an ec2 instance
+  - digital ocean with postgres and pgbouncer.
+- after working with these, I switched to planetscale to host a managed vitese cluster because it provides:
+  - a free tier with up to 1000 connections
+  - pull request based schema changes
+  - excellent built in logs
+  - multi AZ deployments
+  - auto scaling to the moon because of vitess
 
 ### Image Uploads
-
 1. The client authenticates with Googles Oath service
 1. The client sends a requests a presigned upload url
 1. A serverless function rate limits the request using a sliding log algorithm
@@ -118,23 +115,26 @@ After working with these, I switched to MySQL and use planetscale to host a mana
 1. The serverless function runs a chron job to cleanup stale pictures
 
 ### Incremental Static Regeneration & React Query
-
-Next.js can generate static HTML incrementally into it's edge network cache. When that page is served to the client, the next data is passed to react-query as as initial data. From there react-query can take over and do some powerful things like refetch on window focus and optimistic updates for mutations.
+1. Next.js can generate static HTML incrementally into it's edge network cache. 
+1. When that page is served to the client, the next data is passed to react-query as as initial data.
+1. From there react-query can take over and do some powerful things like refetch on window focus and optimistic updates for mutations.
 
 ### Threaded comments
-
-[full writeup](https://teaguestockwell.com/blog/threaded-comments)
-
+- [full writeup](https://teaguestockwell.com/blog/threaded-comments)
 - statically cached html
 - client side stale while revalidate
 - optimistic updates
 
 ### Search
+a simple database query with a client cache
 
-A user may search for new communities to follow, and other users. This is currently implemented using a serverless functions, a db query, and a client cache. In the future I would like to learn more about elastic search and scale this out into a separate search service.
+## Roadmap
+See the [open issues](https://github.com/teaguestockwell/buildable-readme/issues) for a list of proposed features (and known issues).
 
-## Built With
+## Contact
+Teague Stockwell - [LinkedIn](https://www.linkedin.com/in/teague-stockwell)
 
+## Acknowledgements
 - [TypeScript](https://www.typescriptlang.org)
 - [React](https://reactjs.org/)
 - [Nextjs](https://nextjs.org/docs/api-reference/create-next-app)
@@ -143,36 +143,3 @@ A user may search for new communities to follow, and other users. This is curren
 - [React Query](https://react-query.tanstack.com/)
 - [Zustand](https://github.com/pmndrs/zustand)
 - [Mantine](https://mantine.dev/)
-
-## Database Migrations
-
-Prisma.schema is the source of truth for data models. To deploy changes to production:
-
-- update prisma schema
-- run `npx prisma generate` to generate the typescript api for this schema locally
-- run `npm run docker:db:migrate` to generate the sql migration file
-- [install the planetscale cli](https://github.com/planetscale/cli) `brew install pscale`
-- authenticate pscale `pscale auth login`
-- push schema changes to a new db branch `pscale branch create buildable branch-name-here`
-- connect to the branch `pscale connect buildable branch-name-here --port 3309`
-- push sql migration to the branch `DATABASE_URL="mysql://root@127.0.0.1:3309/buildable?connect_timeout=30&pool_timeout=30&socket_timeout=30" npx prisma db push`
-- create a pr `pscale deploy-request create buildable branch-name-here`
-- merge pr with cli or web ui `pscale deploy-request deploy buildable 1` 1 is the pr number reported by the cli when the pr was created
-
-### Troubleshooting migration failures
-
-1. Error: P1000: Authentication failed against database server at `xxx`, the provided database credentials for `xxx` are not valid.
-   - go to the web ui for that branch and manually create a new connection string instead of using the local proxy.
-
-## Roadmap
-
-See the [open issues](https://github.com/teaguestockwell/buildable-readme/issues) for a list of proposed features (and known issues).
-
-## Contact
-
-Teague Stockwell - [LinkedIn](https://www.linkedin.com/in/teague-stockwell)
-
-## Acknowledgements
-
-- [RotorBuilds](https://rotorbuilds.com/)
-- [Lee Robinson's AWS upload template](https://github.com/leerob/nextjs-aws-s3)
