@@ -101,18 +101,58 @@
   - auto scaling to the moon because of vitess
 
 ### Image Uploads
-1. The client authenticates with Googles Oath service
-1. The client sends a requests a presigned upload url
-1. A serverless function rate limits the request using a sliding log algorithm
-1. The serverless function creates a record of the pending image that has not been assigned a resource
-1. The serverless function responds to the client with a presigned upload url
-1. The client attaches a picture to a post or community
-1. The client compresses the picture using a service worker until it meets the size limit on the pre signature
-1. The client uploads the picture using th pre signature
-1. The client submits the form containing the picture to the server
-1. A serverless function verifies the picture was uploaded correctly by sending a head request to s3
-1. The serverless function deletes the pending upload job
-1. The serverless function runs a chron job to cleanup stale pictures
+```mermaid
+sequenceDiagram
+participant bucket
+participant api2
+participant cdn
+participant service worker
+participant browser
+participant api1
+participant db
+
+opt chron job
+api1 ->> db: get jobs where expired
+db -->> api1: jobs
+api1 ->> bucket: delete imgs
+bucket -->> api1: ok
+api1 ->> db: delete jobs
+db -->> api1: ok
+end
+
+opt cache miss
+cdn->>api2: resize img {key} {size}
+api2->> bucket: get {key}
+bucket -->> api2: img {key}
+api2 ->> api2: resize
+api2 ->> bucket: upload resized
+bucket -->> api2: ok
+api2 -->> cdn: cache hit
+end
+
+browser ->> api1: get presigned url
+api1 ->> db: rate limits where user, resourse, time
+db -->> api1: rows
+api1 ->> api1: rate limit using a sliding log algorithm
+api1 ->> api1: sign an upload for size and url with private key
+api1 ->> db: create job
+db -->> api1: ok
+api1 -->> browser: presigned url
+browser ->> browser: select and crop an img
+browser ->> service worker: resize img
+service worker ->> service worker: compress
+service worker -->> browser: compressed img
+browser ->> bucket: upload img with progress
+bucket -->> browser: ok
+browser ->> api1: commit upload {key}
+api1 ->> bucket: verify {key}
+bucket -->> api1: ok
+api1 -->> db: delete job
+db -->> api1: ok
+api1 -->> browser: commited
+browser -->> cdn: get img {key} {size}
+cdn -->> browser: img {key} {size}
+```
 
 ### Incremental Static Regeneration & React Query
 1. Next.js can generate static HTML incrementally into it's edge network cache. 
