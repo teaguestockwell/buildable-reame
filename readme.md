@@ -129,7 +129,7 @@ A user may search for new communities to follow, and other users. This is curren
 - Google Oauth
 
 <p align="center">
-  <img src="https://user-images.githubusercontent.com/71202372/186842240-27fb09a7-1616-46b8-8ebb-b87bd6b0df30.png" alt="system architecture" width="1000vh" >
+  <img src="https://user-images.githubusercontent.com/71202372/221340527-b8a083c6-a4f0-4a52-8286-b86e696f8be1.jpg" width="1000vh" >
 </p>
 
 ## Database Migrations
