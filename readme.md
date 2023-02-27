@@ -259,6 +259,7 @@ participant browser
 participant api1
 participant db
 
+note over bucket, db: cleanup imgs never commited
 opt chron job
 api1 ->> db: get jobs where expired
 db -->> api1: jobs
@@ -268,6 +269,7 @@ api1 ->> db: delete jobs
 db -->> api1: ok
 end
 
+note over bucket, db: resized img cache miss
 opt cache miss
 cdn->>api2: resize img {key} {size}
 api2->> bucket: get {key}
@@ -278,6 +280,17 @@ bucket -->> api2: ok
 api2 -->> cdn: cache hit
 end
 
+note over bucket, db: service worker cache miss
+opt cache miss
+service worker -->> cdn: get img {key} {size}
+cdn --> service worker: img {key} {size}
+end
+
+note over bucket, db: img query
+browser ->> service worker: get img {key} {size}
+service worker -->> browser: img {key} {size}
+
+note over bucket, db: img upload
 browser ->> api1: get presigned url
 api1 ->> db: rate limits where user, resourse, time
 db -->> api1: rows
@@ -298,8 +311,6 @@ bucket -->> api1: ok
 api1 -->> db: delete job
 db -->> api1: ok
 api1 -->> browser: commited
-browser -->> cdn: get img {key} {size}
-cdn -->> browser: img {key} {size}
 ```
 
 ### Incremental Static Regeneration & React Query
